@@ -167,6 +167,7 @@ void Tokenizer::load_special(std::ifstream& tok_file) {
 }
 
 std::vector<int> Tokenizer::encode(const std::string& str) {
+    // HANG_STOPWATCH();
     std::vector<int> ids = prefix_tokens_;
     if (!special_tokens_.empty()) {
         std::string text = str;

@@ -383,6 +383,7 @@ include_directories(${CMAKE_CURRENT_LIST_DIR}/include/
                     ${CMAKE_CURRENT_LIST_DIR}/3rd_party/half
                     ${CMAKE_CURRENT_LIST_DIR}/3rd_party/imageHelper
                     ${CMAKE_CURRENT_LIST_DIR}/3rd_party/OpenCLHeaders/
+                    ${CMAKE_CURRENT_LIST_DIR}/transformers/common
                   )
 list(APPEND MNN_INCLUDES
         ${CMAKE_CURRENT_LIST_DIR}/include/

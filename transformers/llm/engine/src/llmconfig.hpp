@@ -429,6 +429,7 @@ public:
     // < sampler config start
     std::string sampler_type() const {
         return config_.value("sampler_type", "greedy");
+        // return config_.value("sampler_type", "temperature");
     }
 
     std::vector<std::string> mixed_samplers() const {
@@ -436,11 +437,13 @@ public:
     }
 
     float temperature() const {
-        return config_.value("temperature", 1.0f);
+        /** [qwen2.5-vl] set temperature to 0 */
+        return config_.value("temperature", 0.1f);
     }
 
     int topK() const {
-        return config_.value("topK", 40);
+        /** [qwen2.5-vl] set topk to 10 */
+        return config_.value("topK", 10);
     }
 
     float topP() const {

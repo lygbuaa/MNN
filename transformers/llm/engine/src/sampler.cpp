@@ -193,6 +193,7 @@ void Sampler::SamplerConfig::configGreedy(std::shared_ptr<LlmConfig> llmConfig) 
 }
 void Sampler::SamplerConfig::configTemperature(std::shared_ptr<LlmConfig> llmConfig) {
     temperature = llmConfig->temperature();
+    RLOGW("[qwen2d5-vl] Sampler temperature: %.2f", temperature);
     select_type = "temperature";
 }
 void Sampler::SamplerConfig::configTopK(std::shared_ptr<LlmConfig> llmConfig) {

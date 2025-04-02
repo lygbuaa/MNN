@@ -23,6 +23,8 @@
 #include <MNN/expr/MathOp.hpp>
 #include <MNN/expr/NeuralNetWorkOp.hpp>
 
+#include "tcp-socket-server.h"
+
 namespace MNN {
 namespace Transformer {
 class Tokenizer;
@@ -63,6 +65,7 @@ struct LlmContext {
     std::vector<int> history_tokens;
     std::vector<int> output_tokens;
     std::string generate_str;
+    std::function<ssize_t(const char*)> fcb_decode;
 };
 
 class MNN_PUBLIC Llm {
@@ -75,6 +78,7 @@ public:
     Llm(std::shared_ptr<LlmConfig> config);
     virtual ~Llm();
     virtual void load();
+    void setDecodeCallback(std::function<ssize_t(const char*)> fcb);
     virtual Express::VARP gen_attention_mask(int seq_len);
     virtual Express::VARP gen_position_ids(int seq_len);
     virtual Express::VARP embedding(const std::vector<int>& input_ids);

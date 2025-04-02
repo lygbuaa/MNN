@@ -229,6 +229,11 @@ Llm* Llm::createLLM(const std::string& config_path) {
     return llm;
 }
 
+void Llm::setDecodeCallback(std::function<ssize_t(const char*)> fcb) {
+    mContext->fcb_decode = fcb;
+    RLOGI("setDecodeCallback done.");
+}
+
 static MNNForwardType backend_type_convert(const std::string& type_str) {
     if (type_str == "cpu")
         return MNN_FORWARD_CPU;
@@ -336,6 +341,7 @@ static inline VARP _var(std::vector<T> vec, const std::vector<int> &dims) {
 }
 
 void Llm::load() {
+    HANG_STOPWATCH();
     initRuntime();
     // init module status
     // 1. load vocab
@@ -423,6 +429,7 @@ bool Llm::select_module(size_t index) {
 }
 
 void Llm::tuning(TuneType type, std::vector<int> candidates) {
+    HANG_STOPWATCH();
     if (type != OP_ENCODER_NUMBER) {
         MNN_ERROR("tuning type not supported\n");
         return;
@@ -498,6 +505,7 @@ Express::VARP Llm::forwardRaw(Express::VARP hiddenState, Express::VARP mask, Exp
 }
 
 VARP Llm::forward(const std::vector<int>& input_ids, bool is_prefill) {
+    HANG_STOPWATCH();
     int seq_len         = input_ids.size();
     mMeta->add          = seq_len;
     auto attention_mask = gen_attention_mask(seq_len);
@@ -510,6 +518,7 @@ VARP Llm::forward(const std::vector<int>& input_ids, bool is_prefill) {
 }
 
 int Llm::sample(VARP logits, int offset, int size) {
+    // HANG_STOPWATCH();
     auto logitsShape = logits->getInfo()->dim;
     if (logitsShape.size() == 3 && logitsShape[1] > 1) {
         // get last logits
@@ -531,6 +540,7 @@ void Llm::reset() {
 }
 
 void Llm::generate_init(std::ostream* os, const char* end_with) {
+    HANG_STOPWATCH();
     // init status
     mContext->os = os;
     if (nullptr != end_with) {
@@ -581,14 +591,20 @@ bool Llm::stoped() {
 }
 
 void Llm::generate(int max_token) {
+    HANG_STOPWATCH();
     int len = 0;
     while (len < max_token) {
         MNN::Timer _t;
         auto decodeStr = tokenizer_decode(mContext->current_token);
+        // RLOGI("[qwen2d5-vl] Llm::generate() decodeStr: %s", decodeStr.c_str());
         mContext->generate_str += decodeStr;
         if (nullptr != mContext->os) {
             *mContext->os << decodeStr;
             *mContext->os << std::flush;
+        }
+        if (nullptr != mContext->fcb_decode)
+        {
+            mContext->fcb_decode(decodeStr.c_str());
         }
         // mContext->history_tokens.push_back(mContext->current_token);
         mMeta->remove = 0;
@@ -711,6 +727,7 @@ static inline bool needNewVar(VARP var, int axis, int seq_len) {
 }
 
 VARP Llm::embedding(const std::vector<int>& input_ids) {
+    // HANG_STOPWATCH();
     AUTOTIME;
     int hidden_size = mConfig->hidden_size();
     int seq_len = static_cast<int>(input_ids.size());
@@ -871,8 +888,10 @@ void Mllm::load() {
 }
 
 std::vector<int> Mllm::vision_process(const std::string& file) {
+    HANG_STOPWATCH();
 #ifdef LLM_SUPPORT_VISION
     VARP image = MNN::CV::imread(file);
+    RLOGW("MNN::CV::imread file %s", file.c_str());
     if (image == nullptr) {
         MNN_PRINT("Mllm Can't open image: %s\n", file.c_str());
         return std::vector<int>(0);
@@ -884,9 +903,11 @@ std::vector<int> Mllm::vision_process(const std::string& file) {
         // Qwen2-VL
         mVisionHeight = round(mVisionHeight / 28.0) * 28;
         mVisionWidth = round(mVisionWidth / 28.0) * 28;
+        RLOGW("[1] resize image to %d x %d", mVisionHeight, mVisionWidth);
         image        = MNN::CV::resize(image, {mVisionHeight, mVisionWidth}, 0, 0,
                                      MNN::CV::INTER_LINEAR, MNN::CV::COLOR_BGR2RGB,
                                      mVisionMean, mVisionNorm);
+                                     
         image        = Express::_Unsqueeze(image, {0});
         image        = Express::_Convert(image, NCHW);
         auto patches = Express::_Concat({image, image}, 0);
@@ -941,12 +962,16 @@ std::vector<int> Mllm::vision_process(const std::string& file) {
         attention_mask->setName("attention_mask");
         MNN::Express::Variable::save({patches, position_ids, attention_mask}, "input.mnn");
 #endif
-        image_embedding = mMulModule->onForward({patches, position_ids, attention_mask})[0];
+        {
+            HANG_STOPWATCH();
+            image_embedding = mMulModule->onForward({patches, position_ids, attention_mask})[0];
+        }
 #ifdef DEBUG_IMAGE
         image_embedding->setName("image_embeds");
         MNN::Express::Variable::save({image_embedding}, "output.mnn");
 #endif
     } else {
+        RLOGW("[2] resize image to %d x %d", mVisionHeight, mVisionWidth);
         image           = MNN::CV::resize(image, {mVisionHeight, mVisionWidth}, 0, 0,
                                           MNN::CV::INTER_LINEAR, MNN::CV::COLOR_BGR2RGB,
                                           mVisionMean, mVisionNorm);
@@ -1054,6 +1079,8 @@ std::vector<int> Mllm::multimode_process(const std::string& mode, std::string in
 }
 
 std::vector<int> Mllm::tokenizer_encode(const std::string& prompt) {
+    static std::vector<int> cache_mul_ids;
+    HANG_STOPWATCH();
     // split query
     std::regex multimode_regex("<(img|audio)>(.*?)</\\1>");
     std::string::const_iterator searchStart(prompt.cbegin());
@@ -1065,13 +1092,16 @@ std::vector<int> Mllm::tokenizer_encode(const std::string& prompt) {
         // std::cout << "img match: " << match[1].str() << std::endl;
         auto txt_ids = mTokenizer->encode(match.prefix().str());
         ids.insert(ids.end(), txt_ids.begin(), txt_ids.end());
+        RLOGW("tokenizer_encode[1], ids size: %d", ids.size());
         auto mul_ids = multimode_process(match[1].str(), match[2].str());
         ids.insert(ids.end(), mul_ids.begin(), mul_ids.end());
+        RLOGW("tokenizer_encode[2], ids size: %d", ids.size());
         searchStart = match.suffix().first;
     }
     if (searchStart != prompt.cend()) {
         auto txt_ids = mTokenizer->encode(std::string(searchStart, prompt.cend()));
         ids.insert(ids.end(), txt_ids.begin(), txt_ids.end());
+        RLOGW("tokenizer_encode[3], ids size: %d", ids.size());
     }
     return ids;
 }
