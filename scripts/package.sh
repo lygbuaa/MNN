@@ -18,18 +18,14 @@ function find_mnn_path() {
 
 MNN_PATH=$( find_mnn_path )
 cd ${MNN_PATH}
+mkdir -p kentucky/build
+mkdir -p kentucky/images
+mkdir -p kentucky/scripts
 
-LIB_MNN_PATH=${MNN_PATH}/build
-export LD_LIBRARY_PATH=${LIB_MNN_PATH}:$LD_LIBRARY_PATH
-
-VL_MODEL_PATH=${MNN_PATH}/../vlm_models/Qwen2.5-VL-7B-Instruct-MNN
-CONFIG_FILE_PATH=${VL_MODEL_PATH}/config.json
-PROMPT_FILE_PATH=${VL_MODEL_PATH}/prompt.txt
-HOST_IP=127.0.0.1
-HOST_PORT=10001
-TEMPERATURE=0.0
-
-${MNN_PATH}/build/llm_server \
-${CONFIG_FILE_PATH} \
-${HOST_IP} \
-${HOST_PORT}
+cp build/*.so                       kentucky/build
+cp build/express/libMNN_Express.so  kentucky/build
+cp build/tools/cv/libMNNOpenCV.so   kentucky/build
+cp build/llm_server                 kentucky/build
+cp -r scripts/run_llm_server.sh     kentucky/scripts
+cp -r scripts/*.py                  kentucky/scripts
+cp -r images/270p                   kentucky/images

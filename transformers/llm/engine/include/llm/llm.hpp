@@ -93,7 +93,7 @@ public:
     void eraseHistory(size_t begin, size_t end);
     void response(const std::vector<int>& input_ids, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
     void response(const std::string& user_content, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
-    void response(const ChatMessages& chat_prompts, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
+    void response(const ChatMessages& chat_prompts, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1, bool new_image = false);
     void generate_init(std::ostream* os = nullptr, const char* end_with = nullptr);
     void generate(int max_token);
     std::vector<int> generate(const std::vector<int>& input_ids, int max_new_tokens = -1);
@@ -110,7 +110,7 @@ public:
     // tokenier function
     bool is_stop(int token);
     std::string tokenizer_decode(int token);
-    virtual std::vector<int> tokenizer_encode(const std::string& query);
+    virtual std::vector<int> tokenizer_encode(const std::string& query, bool new_image=false);
     friend class Pipeline;
     const LlmContext* getContext() const {
         return mContext.get();

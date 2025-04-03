@@ -262,7 +262,7 @@ public:
             RLOGE("args missing.");
             return false;
         }
-    
+
         std::string config_path = argv[1];
         RLOGI("config file path: %s", config_path.c_str());
         const char* ip_addr = argv[2];
@@ -271,6 +271,7 @@ public:
 
         llm_ = std::unique_ptr<Llm>(Llm::createLLM(config_path));
         llm_ -> set_config("{\"tmp_path\":\"tmp\"}");
+        resp_token_count_ = 0;
 
         {
             AUTOTIME;
@@ -317,8 +318,14 @@ public:
     {
         // memset(send_buf_, 0, MSG_LEN_);
         // memcpy(send_buf_, resp, strlen(resp));
+        if(++resp_token_count_ == 1)
+        {
+            resp_start_us_ = gfGetCurrentMicros();
+            RLOGW("start count resp token: %ld", resp_start_us_);
+        }
         ssize_t len = tcp_server_ -> s_send(resp, strlen(resp));
-        RLOGI("send resp(%d): [%s]\n", len, resp);
+        
+        // RLOGI("send resp(%d): [%s]\n", len, resp);
         return len;
     }
 
@@ -334,6 +341,7 @@ public:
         ChatMessages eval_messages;
         // messages.emplace_back("system", "You are a helpful assistant.");
         char tmp_buf[256] = {0}; //"<img><hw>270, 480</hw>"
+        bool new_image_arrival = false;
 
         while(running_)
         {
@@ -379,6 +387,7 @@ public:
                     }
                     memset(tmp_buf, 0, 256);
                     snprintf(tmp_buf, 256, "<img><hw>%d, %d</hw>", height, width);
+                    new_image_arrival = true;
 
                     /** this is image with prompt */
                     prompt = obj.Get<std::string>("prompt", "");
@@ -413,17 +422,27 @@ public:
                     }
                     // messages.clear();
                     eval_messages = init_messages;
+                    new_image_arrival = false;
                     prompt = gfUnescapeUnicode(prompt);
                     RLOGI("prompt: %s\n", prompt.c_str());
                     std::string user_str = prompt;
                     RLOGI("user_str: %s", user_str.c_str());
                     eval_messages.emplace_back("user", user_str);
                 }
-
-                llm_ -> response(eval_messages);
+                resp_token_count_ = 0;
+                prefill_start_us_ = gfGetCurrentMicros();
+                // response(const ChatMessages& chat_prompts, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1, bool new_image = false);
+                llm_ -> response(eval_messages, &std::cout, nullptr, -1, new_image_arrival);
                 const std::string& assistant_str = llm_ctx->generate_str;
                 // messages.emplace_back("assistant", assistant_str);
+                resp_stop_us_ = gfGetCurrentMicros();
+                float prefill_sec = (resp_start_us_ - prefill_start_us_) * 1e-6;
+                float resp_total_sec = (resp_stop_us_ - resp_start_us_) * 1e-6;
+                float ms_per_token = (resp_stop_us_ - resp_start_us_) * 1e-3 / resp_token_count_;
+                float resp_token_fps = 1000.0f / ms_per_token;
                 RLOGI("assistant_str: %s", assistant_str.c_str());
+                RLOGI("prefill_sec: %.1f", prefill_sec);
+                RLOGI("resp_token_count_: %d, resp_total_sec: %.1f, ms_per_token: %.1f, resp_token_fps: %.1f", resp_token_count_, resp_total_sec, ms_per_token, resp_token_fps);
             }
         }
         free(recv_buf);
@@ -431,7 +450,7 @@ public:
     }
 
 private:
-    constexpr static char* LOCAL_IMG_PATH_="images/";
+    constexpr static char* LOCAL_IMG_PATH_="images/270p/";
     constexpr static int MSG_LEN_ = 1024;
     std::shared_ptr<common::TcpSocketServer> tcp_server_;
     std::shared_ptr<std::thread> work_loop_;
@@ -441,7 +460,11 @@ private:
     MNN::BackendConfig backendConfig_;
     std::shared_ptr<MNN::Express::Executor> executor_;
     std::unique_ptr<Llm> llm_;
-    
+
+    uint32_t resp_token_count_;
+    uint64_t prefill_start_us_;
+    uint64_t resp_start_us_;
+    uint64_t resp_stop_us_;
 
 };
 

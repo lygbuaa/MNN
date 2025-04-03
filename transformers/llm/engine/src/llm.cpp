@@ -202,7 +202,7 @@ public:
         mMulModule.reset();
     }
     virtual void load() override;
-    virtual std::vector<int> tokenizer_encode(const std::string& query) override;
+    virtual std::vector<int> tokenizer_encode(const std::string& query, bool new_image = false) override;
     virtual Express::VARP embedding(const std::vector<int>& input_ids) override;
 
 private:
@@ -210,8 +210,8 @@ private:
         mVisionEnd = 151858, mVisionPad = 151859, mAudioPad = 151646;
     std::vector<float> mVisionMean{122.7709383, 116.7460125, 104.09373615};
     std::vector<float> mVisionNorm{0.01459843, 0.01500777, 0.01422007};
-    std::vector<int> multimode_process(const std::string& mode, std::string info);
-    std::vector<int> vision_process(const std::string& file);
+    std::vector<int> multimode_process(const std::string& mode, std::string info, bool new_image = false);
+    std::vector<int> vision_process(const std::string& file, bool new_image = false);
     std::vector<int> audio_process(const std::string& file);
     std::shared_ptr<Module> mMulModule;
     std::vector<VARP> mMulEmbeddings;
@@ -489,6 +489,7 @@ void Llm::setKVCacheInfo(size_t add, size_t remove, int* reserve, int n_reserve)
 }
 
 Express::VARP Llm::forwardRaw(Express::VARP hiddenState, Express::VARP mask, Express::VARP inputPos) {
+    // HANG_STOPWATCH();
     VARP logits;
     auto logitsIndex = _var<int>({-1}, {1});
     if (mConfig->all_logits()) {
@@ -507,6 +508,7 @@ Express::VARP Llm::forwardRaw(Express::VARP hiddenState, Express::VARP mask, Exp
 VARP Llm::forward(const std::vector<int>& input_ids, bool is_prefill) {
     HANG_STOPWATCH();
     int seq_len         = input_ids.size();
+    // RLOGD("[forward][0] seq_len: %d", seq_len);
     mMeta->add          = seq_len;
     auto attention_mask = gen_attention_mask(seq_len);
     auto position_ids = gen_position_ids(seq_len);
@@ -540,7 +542,7 @@ void Llm::reset() {
 }
 
 void Llm::generate_init(std::ostream* os, const char* end_with) {
-    HANG_STOPWATCH();
+    // HANG_STOPWATCH();
     // init status
     mContext->os = os;
     if (nullptr != end_with) {
@@ -648,7 +650,7 @@ std::vector<int> Llm::generate(const std::vector<int>& input_ids, int max_tokens
     return mContext->output_tokens;
 }
 
-std::vector<int> Llm::tokenizer_encode(const std::string& user_content) {
+std::vector<int> Llm::tokenizer_encode(const std::string& user_content, bool new_image) {
     return mTokenizer->encode(user_content);
 }
 
@@ -667,12 +669,12 @@ void Llm::response(const std::string& user_content, std::ostream* os, const char
     response(input_ids, os, end_with, max_new_tokens);
 }
 
-void Llm::response(const ChatMessages& chat_prompts, std::ostream* os, const char* end_with, int max_new_tokens) {
+void Llm::response(const ChatMessages& chat_prompts, std::ostream* os, const char* end_with, int max_new_tokens, bool new_image) {
     if (chat_prompts.empty()) {
         return;
     }
     auto prompt = mPrompt->applyTemplate(chat_prompts);
-    std::vector<int> input_ids = tokenizer_encode(prompt);
+    std::vector<int> input_ids = tokenizer_encode(prompt, new_image);
     response(input_ids, os, end_with, max_new_tokens);
 }
 
@@ -748,6 +750,7 @@ std::string Llm::tokenizer_decode(int id) {
 }
 
 VARP Llm::gen_attention_mask(int seq_len) {
+    // HANG_STOPWATCH();
     int kv_seq_len = mContext->all_seq_len + seq_len;
     if (seq_len == 1) {
         kv_seq_len = seq_len;
@@ -797,6 +800,7 @@ VARP Llm::gen_attention_mask(int seq_len) {
 }
 
 VARP Llm::gen_position_ids(int seq_len) {
+    // HANG_STOPWATCH();
     if (mConfig->attention_mask() == "glm") {
         // chatglm
         if (needNewVar(positionIds, 2, seq_len)) {
@@ -887,7 +891,7 @@ void Mllm::load() {
     }
 }
 
-std::vector<int> Mllm::vision_process(const std::string& file) {
+std::vector<int> Mllm::vision_process(const std::string& file, bool new_image) {
     HANG_STOPWATCH();
 #ifdef LLM_SUPPORT_VISION
     VARP image = MNN::CV::imread(file);
@@ -898,6 +902,7 @@ std::vector<int> Mllm::vision_process(const std::string& file) {
     }
     Timer _t;
     VARP image_embedding;
+    static VARP image_embedding_cache;
 
     if (mMulModule->getInfo()->inputNames[0] == "patches") {
         // Qwen2-VL
@@ -962,9 +967,16 @@ std::vector<int> Mllm::vision_process(const std::string& file) {
         attention_mask->setName("attention_mask");
         MNN::Express::Variable::save({patches, position_ids, attention_mask}, "input.mnn");
 #endif
+        if(new_image)
         {
-            HANG_STOPWATCH();
+            RLOGW("Mllm::vision_process generate new image_embedding");
             image_embedding = mMulModule->onForward({patches, position_ids, attention_mask})[0];
+            image_embedding_cache = image_embedding;
+        }
+        else
+        {
+            RLOGW("Mllm::vision_process using image_embedding_cache");
+            image_embedding = image_embedding_cache;
         }
 #ifdef DEBUG_IMAGE
         image_embedding->setName("image_embeds");
@@ -1017,7 +1029,7 @@ std::vector<int> Mllm::audio_process(const std::string& file) {
 #endif
 }
 
-std::vector<int> Mllm::multimode_process(const std::string& mode, std::string info) {
+std::vector<int> Mllm::multimode_process(const std::string& mode, std::string info, bool new_image) {
     auto file_info = info;
     if (mode == "img") {
         std::regex hw_regex(R"(<hw>(.*?)</hw>)");
@@ -1070,7 +1082,7 @@ std::vector<int> Mllm::multimode_process(const std::string& mode, std::string in
         }
     }
     if (mode == "img" && mConfig->is_visual()) {
-        return vision_process(file_info);
+        return vision_process(file_info, new_image);
     }
     if (mode == "audio" && mConfig->is_audio()) {
         return audio_process(file_info);
@@ -1078,7 +1090,7 @@ std::vector<int> Mllm::multimode_process(const std::string& mode, std::string in
     return std::vector<int>(0);
 }
 
-std::vector<int> Mllm::tokenizer_encode(const std::string& prompt) {
+std::vector<int> Mllm::tokenizer_encode(const std::string& prompt, bool new_image) {
     static std::vector<int> cache_mul_ids;
     HANG_STOPWATCH();
     // split query
@@ -1090,12 +1102,22 @@ std::vector<int> Mllm::tokenizer_encode(const std::string& prompt) {
 
     while (std::regex_search(searchStart, prompt.cend(), match, multimode_regex)) {
         // std::cout << "img match: " << match[1].str() << std::endl;
+        RLOGI("tokenizer_encode[0], match[1]: %s, match[2]: %s", match[1].str().c_str(), match[2].str().c_str());
         auto txt_ids = mTokenizer->encode(match.prefix().str());
         ids.insert(ids.end(), txt_ids.begin(), txt_ids.end());
         RLOGW("tokenizer_encode[1], ids size: %d", ids.size());
-        auto mul_ids = multimode_process(match[1].str(), match[2].str());
-        ids.insert(ids.end(), mul_ids.begin(), mul_ids.end());
-        RLOGW("tokenizer_encode[2], ids size: %d", ids.size());
+        // if(new_image)
+        {
+            auto mul_ids = multimode_process(match[1].str(), match[2].str(), new_image);
+            ids.insert(ids.end(), mul_ids.begin(), mul_ids.end());
+            RLOGW("tokenizer_encode[2], ids size: %d", ids.size());
+            // cache_mul_ids = mul_ids;
+        }
+        // else
+        // {
+        //     ids.insert(ids.end(), cache_mul_ids.begin(), cache_mul_ids.end());
+        //     RLOGW("tokenizer_encode[2], ids size: %d", ids.size());
+        // }
         searchStart = match.suffix().first;
     }
     if (searchStart != prompt.cend()) {
