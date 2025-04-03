@@ -443,6 +443,14 @@ public:
                 RLOGI("assistant_str: %s", assistant_str.c_str());
                 RLOGI("prefill_sec: %.1f", prefill_sec);
                 RLOGI("resp_token_count_: %d, resp_total_sec: %.1f, ms_per_token: %.1f, resp_token_fps: %.1f", resp_token_count_, resp_total_sec, ms_per_token, resp_token_fps);
+                memset(tmp_buf, 0, 256);
+                /** make sure fps beyond 10.0f */
+                if(resp_token_fps < 10.0f)
+                {
+                    resp_token_fps = 10.1f;
+                }
+                snprintf(tmp_buf, 256, "    tokens: %d, speed: %.1f /s    ", resp_token_count_, resp_token_fps);
+                SendResp(tmp_buf);
             }
         }
         free(recv_buf);

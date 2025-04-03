@@ -1,3 +1,19 @@
+# run transformers/llm/engine/demo/llm_server
+## build
+1. `bash scripts/build_arm64.sh`
+
+## package binaries into texas
+1. `bash scripts/package.sh`
+
+## run server
+1. `bash scripts/run_llm_server.sh`
+
+## run client
+1. `python3 scripts/socket_client.py`
+
+
+
+
 ![MNN](doc/banner.png)
 
 [中文版本](README_CN.md)
