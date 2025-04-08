@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <thread>
 #include <initializer_list>
+#include <libgen.h>
 
 #include "tinyjson.hpp"
 #include "tcp-socket-server.h"
@@ -252,24 +253,92 @@ public:
     Qwen2d5vlServer() {}
     ~Qwen2d5vlServer() {}
 
-    bool Init(int argc, char ** argv)
+    bool InitSocket(int argc, char ** argv)
     {
-        /** load models */
-        executor_ = MNN::Express::Executor::newExecutor(MNN_FORWARD_CPU, backendConfig_, 1);
-        MNN::Express::ExecutorScope s(executor_);
         if(argc < 4)
         {
             RLOGE("args missing.");
             return false;
         }
 
-        std::string config_path = argv[1];
-        RLOGI("config file path: %s", config_path.c_str());
-        const char* ip_addr = argv[2];
-        const uint16_t ip_port = atoi(argv[3]);
-        RLOGI("ip_addr: %s, ip_port: %d.\n", ip_addr, ip_port);
+        const char* ip_addr = argv[1];
+        const uint16_t ip_port = atoi(argv[2]);
+        config_file_name_ = argv[3];
+        RLOGI("ip_addr: %s, ip_port: %d, config_file_name_: %s.\n", ip_addr, ip_port, config_file_name_.c_str());
 
-        llm_ = std::unique_ptr<Llm>(Llm::createLLM(config_path));
+        for(int i=4; i<argc; i++)
+        {
+            std::string model_path_i = argv[i];
+            model_path_i += "/";
+            model_path_i += config_file_name_;
+            model_paths_.emplace_back(model_path_i);
+            RLOGI("model[%d]: %s", (i-4), model_path_i.c_str());
+
+            const char* model_name = basename(argv[i]);
+            model_names_.emplace_back(model_name);
+        }
+        RLOGI("total models: %d", model_paths_.size());
+
+        /** init tcp server */
+        tcp_server_ = std::shared_ptr<common::TcpSocketServer>(new common::TcpSocketServer(ip_addr, 10001));
+        if(!tcp_server_->init_server())
+        {
+            RLOGE("init socket server fail.\n");
+            return false;
+        }
+
+        executor_ = nullptr;
+        llm_ = nullptr;
+
+        cur_model_idx_ = -1;
+        if(!InitModel(0))
+        {
+            RLOGE("init model[0] fail.\n");
+            return false;
+        }
+        RLOGE("init model[%ld] success.\n", cur_model_idx_);
+
+        /** start work thread */
+        running_ = true;
+        setlocale(LC_ALL, "en_US.UTF-8");
+        send_buf_ = (char*)malloc(MSG_LEN_);
+        work_loop_ = std::shared_ptr<std::thread>(new std::thread(&Qwen2d5vlServer::RecvLoop, this));
+        return true;
+    }
+
+    bool InitModel(const size_t model_idx)
+    {
+        if(model_idx > model_paths_.size())
+        {
+            RLOGE("model_idx (%ld) overflow!", model_idx);
+            return false;
+        }
+        if(model_idx == cur_model_idx_)
+        {
+            RLOGI("requesting the same model: %d, do nothing.", cur_model_idx_);
+            return true;
+        }
+        const std::string model_config_path = model_paths_[model_idx];
+        RLOGI("init model[%ld]: %s", model_idx, model_config_path.c_str());
+
+        /** load models */
+        RLOGW("re-init executor to release memory.");
+        if(executor_)
+        {
+            /** release all mDynamic in CPUBackend. */
+            executor_->gc(MNN::Express::Executor::FULL);
+            executor_.reset();
+        }
+        executor_ = MNN::Express::Executor::newExecutor(MNN_FORWARD_CPU, backendConfig_, 1);
+        MNN::Express::ExecutorScope s(executor_);
+
+        RLOGW("re-load model");
+        if(llm_)
+        {
+            llm_->release_module(0);
+            llm_.reset(nullptr);
+        }
+        llm_ = std::unique_ptr<Llm>(Llm::createLLM(model_config_path));
         llm_ -> set_config("{\"tmp_path\":\"tmp\"}");
         resp_token_count_ = 0;
 
@@ -285,19 +354,7 @@ public:
 
         llm_ -> setDecodeCallback(std::bind(&Qwen2d5vlServer::SendResp, this, std::placeholders::_1));
 
-        /** init tcp server */
-        tcp_server_ = std::shared_ptr<common::TcpSocketServer>(new common::TcpSocketServer(ip_addr, 10001));
-        if(!tcp_server_->init_server())
-        {
-            RLOGE("init server fail.\n");
-            return false;
-        }
-
-        /** start work thread */
-        running_ = true;
-        setlocale(LC_ALL, "en_US.UTF-8");
-        send_buf_ = (char*)malloc(MSG_LEN_);
-        work_loop_ = std::shared_ptr<std::thread>(new std::thread(&Qwen2d5vlServer::RecvLoop, this));
+        cur_model_idx_ = model_idx;
         return true;
     }
 
@@ -312,6 +369,8 @@ public:
             }
             free(send_buf_);
         }
+
+        llm_.reset(nullptr);
     }
 
     ssize_t SendResp(const char* resp)
@@ -368,10 +427,31 @@ public:
 
                 tiny::TinyJson obj;
                 obj.ReadJson(recv_buf);
-                std::string image_filename = obj.Get<std::string>("image_filename", "");
+                const int toggle_model = obj.Get<int>("toggle_model", -1);
+                const std::string image_filename = obj.Get<std::string>("image_filename", "");
                 std::string prompt;
 
-                if(image_filename.size() > 0)
+                if(toggle_model >= 0)
+                {
+                    const int choose_model = toggle_model % (model_paths_.size());
+                    RLOGI("recv toggle_model cmd: %d, choose_model: %d", toggle_model, choose_model);
+                    new_image_arrival = false;
+                    if(!InitModel(choose_model))
+                    {
+                        RLOGE("init model[%d] fail. trying re-init model[0].\n", choose_model);
+                        if(!InitModel(0))
+                        {
+                            RLOGE("re-init model[0] fail.\n");
+                            break;
+                        }
+                    }
+
+                    memset(tmp_buf, 0, 256);
+                    snprintf(tmp_buf, 256, "已加载模型 %s.", model_names_[choose_model].c_str());
+                    SendResp(tmp_buf);
+                    continue;
+                }
+                else if(image_filename.size() > 0)
                 {
                     int width = obj.Get<int>("width", 360);
                     if(width < 1 || width > 1920)
@@ -460,6 +540,10 @@ public:
 private:
     constexpr static char* LOCAL_IMG_PATH_="images/270p/";
     constexpr static int MSG_LEN_ = 1024;
+    std::string config_file_name_;
+    std::vector<std::string> model_paths_;
+    std::vector<std::string> model_names_;
+    int cur_model_idx_;
     std::shared_ptr<common::TcpSocketServer> tcp_server_;
     std::shared_ptr<std::thread> work_loop_;
     volatile bool running_;
@@ -489,7 +573,7 @@ int main(int argc, char ** argv)
     SignalHandlers::RegisterBreakSignals(SIGINT);
 
     auto g_ppl_ = std::make_shared<Qwen2d5vlServer>();
-    g_ppl_ -> Init(argc, argv);
+    g_ppl_ -> InitSocket(argc, argv);
 
     uint32_t heartbeat = 0;
     while(!SignalHandlers::BreakByUser())

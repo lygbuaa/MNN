@@ -26,6 +26,10 @@ cp build/*.so                       kentucky/build
 cp build/express/libMNN_Express.so  kentucky/build
 cp build/tools/cv/libMNNOpenCV.so   kentucky/build
 cp build/llm_server                 kentucky/build
-cp -r scripts/run_llm_server.sh     kentucky/scripts
+cp -r scripts/run_mllm_server.sh    kentucky/scripts
 cp -r scripts/*.py                  kentucky/scripts
 cp -r images/270p                   kentucky/images
+
+cp -r scripts/mnn_llm_server.service    kentucky/scripts
+cp -r scripts/install_llm_service.sh    kentucky/scripts
+cp -r scripts/socket_client.py          kentucky/scripts

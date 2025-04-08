@@ -147,13 +147,44 @@ class SocketClient(object):
         except Exception as err:
             print("start_recv_thread error: {}".format(err))
 
+def make_request_toggle_model(idx:int=0) -> bytearray:
+    toggle_model_json = {"toggle_model": 0}
+    toggle_model_json["toggle_model"] = idx
+    msg = bytearray(1024) #1024
+    msg.__init__(len(msg))
+    msg_str = bytearray(json.dumps(toggle_model_json), "utf-8")
+    msg[0:len(msg_str)] = msg_str
+    print("toggle_model: {}".format(toggle_model_json["toggle_model"]))
+    print("make request: {}".format(msg_str))
+    return msg
+
+def make_request_prompt(prompt:str=u"") -> bytearray:
+    prompt_json = {"prompt": u""}
+    prompt_json["prompt"] = prompt
+    msg = bytearray(1024) #1024
+    msg.__init__(len(msg))
+    msg_str = bytearray(json.dumps(prompt_json), "utf-8")
+    msg[0:len(msg_str)] = msg_str
+    print("prompt: {}".format(prompt_json["prompt"]))
+    print("make request: {}".format(msg_str))
+    return msg
+
+def make_request_prompt_with_image(image_filename:str="", prompt:str="") -> bytearray:
+    image_prompt_json = {"image_filename": "wuhan_bridge.jpg", "height": 270, "width": 480, "prompt": u"图片中是哪里?"}
+    image_prompt_json["image_filename"] = image_filename
+    image_prompt_json["prompt"] = prompt
+    msg = bytearray(1024) #1024
+    msg.__init__(len(msg))
+    msg_str = bytearray(json.dumps(image_prompt_json), "utf-8")
+    msg[0:len(msg_str)] = msg_str
+    print("image_filename: {}, prompt: {}".format(image_prompt_json["image_filename"], image_prompt_json["prompt"]))
+    print("make request: {}".format(msg_str))
+    return msg
+
 
 def run_client():
     s_client = SocketClient(host="127.0.0.1", port=10001, type=socket.SOCK_STREAM)
     s_client.start_recv_thread()
-    counter = 0
-    msg = bytearray(1024) #1024
-    msg.__init__(len(msg))
     image1_path_json = {"image_filename": "beijing_tower.jpg", "height": 270, "width": 480, "prompt": u"图片中是哪个地方?"}
     image2_path_json = {"image_filename": "gza_bridge.jpg", "height": 270, "width": 480, "prompt": u"图片中是哪个地方?"}
     image3_path_json = {"image_filename": "huanghe_tower.jpg", "height": 270, "width": 480, "prompt": u"图片中是哪个地方?"}
@@ -165,7 +196,7 @@ def run_client():
     image9_path_json = {"image_filename": "wuhan_bridge.jpg", "height": 270, "width": 480, "prompt": u"图片中是哪个地方?"}
     image10_path_json = {"image_filename": "road_night.jpg", "height": 270, "width": 480, "prompt": u"为图中这条道路规划行车路线?"}
 
-    request_list = [
+    image_json_list = [
         image1_path_json,
         image2_path_json,
         image3_path_json,
@@ -178,15 +209,15 @@ def run_client():
         image10_path_json
     ]
 
-    msg = bytearray(1024) #1024
-    for req in request_list:
-        msg.__init__(len(msg))
-        msg_str = bytearray(json.dumps(req), "utf-8")
-        msg[0:len(msg_str)] = msg_str
-        print("image_filename: {}, prompt: {}".format(req["image_filename"], req["prompt"]))
-        print("request: {}".format(msg_str))
+    msg = make_request_toggle_model(idx=1)
+    s_client.send_array(msg)
+    time.sleep(20.0)
+    print("response: {}".format(str(s_client.full_resp, encoding='utf-8')))
+
+    for img_json in image_json_list:
+        msg = make_request_prompt_with_image(img_json["image_filename"], img_json["prompt"])
         s_client.send_array(msg)
-        time.sleep(25.0)
+        time.sleep(20.0)
         print("response: {}".format(str(s_client.full_resp, encoding='utf-8')))
 
 if __name__ == "__main__":

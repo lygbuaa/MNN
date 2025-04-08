@@ -186,55 +186,11 @@ def run_client():
     s_client = SocketClient(host="127.0.0.1", port=10001, type=socket.SOCK_STREAM)
     s_client.start_recv_thread()
 
-    msg = make_request_toggle_model(idx=0)
-    s_client.send_array(msg)
-    time.sleep(20.0)
-    print("response: {}".format(str(s_client.full_resp, encoding='utf-8')))
-
-    msg = make_request_prompt(prompt=u"以黄鹤楼为题写一首七言绝句")
-    s_client.send_array(msg)
-    time.sleep(10.0)
-    print("response: {}".format(str(s_client.full_resp, encoding='utf-8')))
-
-    msg = make_request_toggle_model(idx=1)
-    s_client.send_array(msg)
-    time.sleep(20.0)
-    print("response: {}".format(str(s_client.full_resp, encoding='utf-8')))
-
-    msg = make_request_prompt_with_image(image_filename="wuhan_bridge.jpg", prompt=u"图片中是哪里?")
-    s_client.send_array(msg)
-    time.sleep(20.0)
-    print("response: {}".format(str(s_client.full_resp, encoding='utf-8')))
-
-    msg = make_request_prompt(prompt=u"图片中天气如何?")
-    s_client.send_array(msg)
-    time.sleep(10.0)
-    print("response: {}".format(str(s_client.full_resp, encoding='utf-8')))
-
-    msg = make_request_toggle_model(idx=0)
-    s_client.send_array(msg)
-    time.sleep(20.0)
-    print("response: {}".format(str(s_client.full_resp, encoding='utf-8')))
-
-    msg = make_request_prompt(prompt=u"以黄鹤楼为题写一首五言律诗")
-    s_client.send_array(msg)
-    time.sleep(10.0)
-    print("response: {}".format(str(s_client.full_resp, encoding='utf-8')))
-
-    msg = make_request_toggle_model(idx=1)
-    s_client.send_array(msg)
-    time.sleep(20.0)
-    print("response: {}".format(str(s_client.full_resp, encoding='utf-8')))
-
-    msg = make_request_prompt_with_image(image_filename="road_uturn.jpg", prompt=u"图片中是哪里?")
-    s_client.send_array(msg)
-    time.sleep(20.0)
-    print("response: {}".format(str(s_client.full_resp, encoding='utf-8')))
-
-    msg = make_request_prompt(prompt=u"图片中的路口可以左转吗?")
-    s_client.send_array(msg)
-    time.sleep(20.0)
-    print("response: {}".format(str(s_client.full_resp, encoding='utf-8')))
+    for idx in range(10):
+        msg = make_request_toggle_model(idx%2)
+        s_client.send_array(msg)
+        time.sleep(30.0)
+        print("response: {}".format(str(s_client.full_resp, encoding='utf-8')))
 
 
 if __name__ == "__main__":

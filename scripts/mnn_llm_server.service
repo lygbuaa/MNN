@@ -1,0 +1,11 @@
+[Unit]
+Description=mnn_llm_service.
+
+[Service]
+ExecStart=/bin/bash /opt/202504_wuhan_llm/mnn_llm_server.ad1000/scripts/run_mllm_server.sh
+KillSignal=SIGINT
+FinalKillSignal=SIGTERM
+TimeoutStopSec=10s
+
+[Install]
+WantedBy=multi-user.target
