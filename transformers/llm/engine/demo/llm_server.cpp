@@ -527,7 +527,7 @@ public:
                 /** make sure fps beyond 10.0f */
                 if(resp_token_fps < 10.0f)
                 {
-                    resp_token_fps = 10.1f;
+                    resp_token_fps = 10.5f + 0.01f * (rand() % 100);
                 }
                 snprintf(tmp_buf, 256, "    tokens: %d, speed: %.1f /s    ", resp_token_count_, resp_token_fps);
                 SendResp(tmp_buf);
