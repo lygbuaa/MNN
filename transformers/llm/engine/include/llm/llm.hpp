@@ -23,6 +23,9 @@
 #include <MNN/expr/MathOp.hpp>
 #include <MNN/expr/NeuralNetWorkOp.hpp>
 
+/** [hugoliu][qwen2.5-vl] */
+#include "tcp-socket-server.h"
+
 namespace MNN {
 namespace Transformer {
 class Tokenizer;
@@ -63,6 +66,8 @@ struct LlmContext {
     std::vector<int> history_tokens;
     std::vector<int> output_tokens;
     std::string generate_str;
+    /** [hugoliu][qwen2.5-vl] */
+    std::function<ssize_t(const char*)> fcb_decode;
 };
 
 class MNN_PUBLIC Llm {
@@ -71,6 +76,9 @@ public:
         Prefill,
         Decode
     };
+    /** [hugoliu][qwen2.5-vl] */
+    void setDecodeCallback(std::function<ssize_t(const char*)> fcb);
+
     static Llm* createLLM(const std::string& config_path);
     Llm(std::shared_ptr<LlmConfig> config);
     virtual ~Llm();
@@ -90,7 +98,9 @@ public:
     void eraseHistory(size_t begin, size_t end);
     virtual void response(const std::vector<int>& input_ids, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
     void response(const std::string& user_content, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
-    void response(const ChatMessages& chat_prompts, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
+    // void response(const ChatMessages& chat_prompts, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
+    /** [hugoliu][qwen2.5-vl] */
+    void response(const ChatMessages& chat_prompts, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1, bool new_image = false);
     void response(MNN::Express::VARP input_embeds, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1);
     virtual void generate_init(std::ostream* os = nullptr, const char* end_with = nullptr);
     void generate(int max_token);
@@ -109,7 +119,9 @@ public:
     // tokenier function
     bool is_stop(int token);
     std::string tokenizer_decode(int token);
-    virtual std::vector<int> tokenizer_encode(const std::string& query);
+    // virtual std::vector<int> tokenizer_encode(const std::string& query);
+    /** [hugoliu][qwen2.5-vl] */
+    virtual std::vector<int> tokenizer_encode(const std::string& query, bool new_image=false);
     friend class Pipeline;
     const LlmContext* getContext() const {
         return mContext.get();

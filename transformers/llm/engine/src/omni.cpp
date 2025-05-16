@@ -119,15 +119,17 @@ void Omni::load() {
     }
 }
 
-std::vector<int> Omni::visionProcess(const std::string& file) {
+std::vector<int> Omni::visionProcess(const std::string& file, bool new_image) {
 #ifdef LLM_SUPPORT_VISION
     VARP image = MNN::CV::imread(file);
+    RLOGW("MNN::CV::imread file %s", file.c_str());
     if (image == nullptr) {
         MNN_PRINT("Omni Can't open image: %s\n", file.c_str());
         return std::vector<int>(0);
     }
     Timer _t;
     VARP image_embedding;
+    static VARP image_embedding_cache;
 
     if (mVisionModule->getInfo()->inputNames[0] == "patches") {
         bool hasWindowIndex = mVisionModule->getInfo()->inputNames.size() == 4 &&
@@ -135,6 +137,7 @@ std::vector<int> Omni::visionProcess(const std::string& file) {
         // Qwen2-VL / Qwen2.5-VL
         mVisionHeight = round(mVisionHeight / 28.0) * 28;
         mVisionWidth = round(mVisionWidth / 28.0) * 28;
+        RLOGW("[1] resize image to %d x %d", mVisionHeight, mVisionWidth);
         image        = MNN::CV::resize(image, {mVisionHeight, mVisionWidth}, 0, 0,
                                      MNN::CV::INTER_LINEAR, MNN::CV::COLOR_BGR2RGB,
                                      mVisionMean, mVisionNorm);
@@ -256,7 +259,21 @@ std::vector<int> Omni::visionProcess(const std::string& file) {
         attention_mask->setName("attention_mask");
         MNN::Express::Variable::save({patches, position_ids, attention_mask}, "input.mnn");
 #endif
-        image_embedding = mVisionModule->onForward(moduleInputs)[0];
+        // image_embedding = mVisionModule->onForward(moduleInputs)[0];
+        /** [hugoliu][qwen2.5-vl] */
+        if(new_image)
+        {
+            HANG_STOPWATCH();
+            RLOGW("Omni::visionProcess generate new image_embedding");
+            image_embedding = mVisionModule->onForward(moduleInputs)[0];
+            image_embedding_cache = image_embedding;
+        }
+        else
+        {
+            RLOGW("Omni::visionProcess using image_embedding_cache");
+            image_embedding = image_embedding_cache;
+        }
+
 #ifdef DEBUG_IMAGE
         image_embedding->setName("image_embeds");
         MNN::Express::Variable::save({image_embedding}, "output.mnn");
@@ -264,6 +281,7 @@ std::vector<int> Omni::visionProcess(const std::string& file) {
     } else {
         mVisionHeight = UP_DIV(mVisionHeight, mVisionSizeUnit) * mVisionSizeUnit;
         mVisionWidth = UP_DIV(mVisionWidth, mVisionSizeUnit) * mVisionSizeUnit;
+        RLOGW("[2] resize image to %d x %d", mVisionHeight, mVisionWidth);
         image           = MNN::CV::resize(image, {mVisionHeight, mVisionWidth}, 0, 0,
                                           MNN::CV::INTER_LINEAR, MNN::CV::COLOR_BGR2RGB,
                                           mVisionMean, mVisionNorm);
@@ -345,7 +363,7 @@ std::vector<int> Omni::audioProcess(const std::string& file) {
 #endif
 }
 
-std::vector<int> Omni::multimodeProcess(const std::string& mode, std::string info) {
+std::vector<int> Omni::multimodeProcess(const std::string& mode, std::string info, bool new_image) {
     auto file_info = info;
     if (mode == "img") {
         std::regex hw_regex(R"(<hw>(.*?)</hw>)");
@@ -398,7 +416,8 @@ std::vector<int> Omni::multimodeProcess(const std::string& mode, std::string inf
         }
     }
     if (mode == "img" && mConfig->is_visual()) {
-        return visionProcess(file_info);
+        /** [hugoliu][qwen2.5-vl] */
+        return visionProcess(file_info, new_image);
     }
     if (mode == "audio" && mConfig->is_audio()) {
         return audioProcess(file_info);
@@ -428,7 +447,13 @@ void Omni::addPositionIds(int t, int h, int w) {
     }
 }
 
-std::vector<int> Omni::tokenizer_encode(const std::string& prompt) {
+/** [hugoliu][qwen2.5-vl]
+ *  for multi-modal LLM, Omni::tokenizer_encode will be called by Llm::response()
+ */
+std::vector<int> Omni::tokenizer_encode(const std::string& prompt, bool new_image) {
+    HANG_STOPWATCH();
+    static std::vector<int> cache_mul_ids;
+
     // split query
     std::regex multimode_regex("<(img|audio)>(.*?)</\\1>");
     std::string::const_iterator searchStart(prompt.cbegin());
@@ -442,14 +467,18 @@ std::vector<int> Omni::tokenizer_encode(const std::string& prompt) {
         auto txt_ids = mTokenizer->encode(match.prefix().str());
         addPositionIds(txt_ids.size());
         ids.insert(ids.end(), txt_ids.begin(), txt_ids.end());
-        auto mul_ids = multimodeProcess(match[1].str(), match[2].str());
+        RLOGW("tokenizer_encode[1], ids size: %d", ids.size());
+        /** [hugoliu][qwen2.5-vl] */
+        auto mul_ids = multimodeProcess(match[1].str(), match[2].str(), new_image);
         ids.insert(ids.end(), mul_ids.begin(), mul_ids.end());
+        RLOGW("tokenizer_encode[2], ids size: %d", ids.size());
         searchStart = match.suffix().first;
     }
     if (searchStart != prompt.cend()) {
         auto txt_ids = mTokenizer->encode(std::string(searchStart, prompt.cend()));
         addPositionIds(txt_ids.size());
         ids.insert(ids.end(), txt_ids.begin(), txt_ids.end());
+        RLOGW("tokenizer_encode[3], ids size: %d", ids.size());
     }
     return ids;
 }

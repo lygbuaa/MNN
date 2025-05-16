@@ -65,6 +65,12 @@ static inline VARP _var(std::vector<T> vec, const std::vector<int> &dims) {
     return _Const(vec.data(), dims, NHWC, halide_type_of<T>());
 }
 
+/** [hugoliu][qwen2.5-vl] */
+void Llm::setDecodeCallback(std::function<ssize_t(const char*)> fcb) {
+    mContext->fcb_decode = fcb;
+    RLOGI("setDecodeCallback done.");
+}
+
 Llm* Llm::createLLM(const std::string& config_path) {
     std::shared_ptr<LlmConfig> config(new LlmConfig(config_path));
     Llm* llm = nullptr;
@@ -155,6 +161,7 @@ void Llm::initRuntime() {
 }
 
 void Llm::load() {
+    HANG_STOPWATCH();
     initRuntime();
     // init module status
     // 1. load vocab
@@ -353,6 +360,7 @@ void Llm::reset() {
 }
 
 void Llm::generate_init(std::ostream* os, const char* end_with) {
+    HANG_STOPWATCH();
     // init status
     mContext->os = os;
     if (nullptr != end_with) {
@@ -403,6 +411,7 @@ bool Llm::stoped() {
 }
 
 void Llm::generate(int max_token) {
+    HANG_STOPWATCH();
     int len = 0;
     while (len < max_token) {
         MNN::Timer _t;
@@ -412,6 +421,13 @@ void Llm::generate(int max_token) {
             *mContext->os << decodeStr;
             *mContext->os << std::flush;
         }
+
+        /** [hugoliu][qwen2.5-vl] */
+        if (nullptr != mContext->fcb_decode)
+        {
+            mContext->fcb_decode(decodeStr.c_str());
+        }
+
         // mContext->history_tokens.push_back(mContext->current_token);
         mMeta->remove = 0;
         auto logits = forward({mContext->current_token});
@@ -456,7 +472,10 @@ std::vector<int> Llm::generate(const std::vector<int>& input_ids, int max_tokens
     return mContext->output_tokens;
 }
 
-std::vector<int> Llm::tokenizer_encode(const std::string& user_content) {
+/** [hugoliu][qwen2.5-vl]
+ *  for non-multi-modal LLM, Llm::tokenizer_encode will be called by Llm::response()
+ */
+std::vector<int> Llm::tokenizer_encode(const std::string& user_content, bool new_image) {
     return mTokenizer->encode(user_content);
 }
 
@@ -505,12 +524,13 @@ void Llm::response(const std::string& user_content, std::ostream* os, const char
     response(input_ids, os, end_with, max_new_tokens);
 }
 
-void Llm::response(const ChatMessages& chat_prompts, std::ostream* os, const char* end_with, int max_new_tokens) {
+void Llm::response(const ChatMessages& chat_prompts, std::ostream* os, const char* end_with, int max_new_tokens, bool new_image) {
     if (chat_prompts.empty()) {
         return;
     }
     auto prompt = mPrompt->applyTemplate(chat_prompts);
-    std::vector<int> input_ids = tokenizer_encode(prompt);
+    /** [hugoliu][qwen2.5-vl] */
+    std::vector<int> input_ids = tokenizer_encode(prompt, new_image);
     response(input_ids, os, end_with, max_new_tokens);
 }
 

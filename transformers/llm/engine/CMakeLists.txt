@@ -16,6 +16,7 @@ endif()
 
 # include dir
 include_directories(${CMAKE_CURRENT_LIST_DIR}/include/)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/../../common)
 
 # source files
 FILE(GLOB SRCS ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp)
@@ -42,10 +43,12 @@ if (LLM_SUPPORT_AUDIO AND MNN_BUILD_AUDIO)
 endif()
 
 add_executable(llm_demo ${CMAKE_CURRENT_LIST_DIR}/demo/llm_demo.cpp)
+add_executable(llm_server ${CMAKE_CURRENT_LIST_DIR}/demo/llm_server.cpp)
 add_executable(embedding_demo ${CMAKE_CURRENT_LIST_DIR}/demo/embedding_demo.cpp)
 add_executable(rollback_demo ${CMAKE_CURRENT_LIST_DIR}/demo/rollback_demo.cpp)
 add_executable(llm_bench ${CMAKE_CURRENT_LIST_DIR}/demo/llm_bench.cpp)
 target_link_libraries(llm_demo ${LLM_DEPS})
+target_link_libraries(llm_server ${LLM_DEPS})
 target_link_libraries(embedding_demo ${LLM_DEPS})
 target_link_libraries(rollback_demo ${LLM_DEPS})
 target_link_libraries(llm_bench ${LLM_DEPS})

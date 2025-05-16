@@ -9,6 +9,8 @@
 #define OMNI_hpp
 
 #include "llm/llm.hpp"
+/** [hugoliu][qwen2.5-vl] */
+#include "logging_utils.h"
 
 namespace MNN {
 using namespace Express;
@@ -105,7 +107,9 @@ public:
     }
     virtual void load() override;
     virtual Express::VARP forwardRaw(Express::VARP hiddenState, Express::VARP mask, Express::VARP inputPos) override;
-    virtual std::vector<int> tokenizer_encode(const std::string& query) override;
+    // virtual std::vector<int> tokenizer_encode(const std::string& query) override;
+    /** [hugoliu][qwen2.5-vl] */
+    virtual std::vector<int> tokenizer_encode(const std::string& query, bool new_image = false) override;
     virtual Express::VARP embedding(const std::vector<int>& input_ids) override;
     virtual Express::VARP gen_position_ids(int seq_len) override;
     virtual void response(const std::vector<int>& input_ids, std::ostream* os = &std::cout, const char* end_with = nullptr, int max_new_tokens = -1) override;
@@ -117,8 +121,11 @@ private:
     int mVisionSizeUnit = 1;
     std::vector<float> mVisionMean{122.7709383, 116.7460125, 104.09373615};
     std::vector<float> mVisionNorm{0.01459843, 0.01500777, 0.01422007};
-    std::vector<int> multimodeProcess(const std::string& mode, std::string info);
-    std::vector<int> visionProcess(const std::string& file);
+    // std::vector<int> multimodeProcess(const std::string& mode, std::string info);
+    // std::vector<int> visionProcess(const std::string& file);
+    /** [hugoliu][qwen2.5-vl] */
+    std::vector<int> multimodeProcess(const std::string& mode, std::string info, bool new_image = false);
+    std::vector<int> visionProcess(const std::string& file, bool new_image = false);
     std::vector<int> audioProcess(const std::string& file);
     std::shared_ptr<Module> mVisionModule, mAudioModule;
     std::vector<VARP> mVisionEmbeddings, mAudioEmbeddings;

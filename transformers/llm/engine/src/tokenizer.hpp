@@ -15,6 +15,9 @@
 #include <iostream>
 // #include <string_view>
 #include <cstring>
+/** [hugoliu][qwen2.5-vl] */
+#include "logging_utils.h"
+
 class string_view_ {
 public:
     string_view_() : data_(nullptr), size_(0) {}
