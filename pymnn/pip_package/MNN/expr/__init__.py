@@ -97,14 +97,14 @@ def _to_var(x, dtype=None):
         except:
             pass
     # 3. Sequence
-    if isinstance(x, _Sequence) and x:
+    if isinstance(x, _Sequence):
         dst_shape, item_type = _list_shape_type(x)
         x = _F.const(x, dst_shape, dtype=item_type)
     # 4. asssert
     if not isinstance(x, _F.Var):
         raise RuntimeError("parameter `x` must be var_like.")
     # 5. convert
-    if dtype is not None and x.dtype != dtype:
+    if dtype is not None:
         x = _F.cast(x, dtype)
     return x
 def _to_axis(axis, shape=None):
@@ -1963,8 +1963,6 @@ def reshape(x, shape, original_format=_F.NCHW):
         if value < 0:
             skip = True
         new_length *= value
-    if new_length != x.size and not skip:
-        raise RuntimeError("parameter shape is not valid")
     return _F.reshape(x, shape, original_format)
 def scale(x, channels, scale, bias):
     '''

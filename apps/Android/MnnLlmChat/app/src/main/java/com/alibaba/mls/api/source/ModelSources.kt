@@ -3,7 +3,7 @@
 package com.alibaba.mls.api.source
 
 import com.alibaba.mls.api.ApplicationProvider
-import com.alibaba.mnnllm.android.settings.MainSettings.getDownloadProvider
+import com.alibaba.mnnllm.android.mainsettings.MainSettings.getDownloadProvider
 
 class ModelSources {
     enum class ModelSourceType {
@@ -15,7 +15,7 @@ class ModelSources {
 
     val remoteSourceType: ModelSourceType
         get() {
-            return getDownloadProvider(ApplicationProvider.get())
+            return getDownloadProvider(ApplicationProvider.get()!!)
         }
 
     private object InstanceHolder {

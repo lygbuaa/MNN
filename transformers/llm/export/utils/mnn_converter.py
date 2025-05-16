@@ -13,7 +13,7 @@ from .lora import LoRA
 EXPORT_LOG = '.export.log'
 
 class MNNConveter:
-    def __init__(self, onnx_path, weight_ops, config):
+    def __init__(self, config, weight_ops = None):
         self.weight_ops = weight_ops
         self.config = config
         self.quant_block = config.args.quant_block
@@ -21,10 +21,6 @@ class MNNConveter:
         self.lm_quant_bit = config.args.lm_quant_bit
         self.symmetric = config.args.sym
         self.mnn_weight_offset = 0
-        self.onnx_model_path = onnx_path
-        self.mnn_name = os.path.basename(onnx_path).replace('.onnx', '.mnn')
-        self.mnn_model_path = os.path.join(config.args.dst_path, self.mnn_name)
-        self.mnn_weight_path = f'{self.mnn_model_path}.weight'
         if os.path.exists(config.args.mnnconvert):
             self.mnnconvert = config.args.mnnconvert
         else:
@@ -64,7 +60,8 @@ class MNNConveter:
             '--MNNModel',
             str(mnn_path),
             '--transformerFuse',
-            '--allowCustomOp'
+            '--allowCustomOp',
+            '--saveExternalData'
         ]
         convert_args += args
         self.convert(convert_args)
@@ -110,7 +107,11 @@ class MNNConveter:
         self.convert(convert_args)
         return mnn_path
 
-    def export(self, quant_bit = None, quant_block = None):
+    def export(self, onnx_path, quant_bit = None, quant_block = None):
+        self.onnx_model_path = onnx_path
+        self.mnn_name = os.path.basename(onnx_path).replace('.onnx', '.mnn')
+        self.mnn_model_path = os.path.join(self.config.args.dst_path, self.mnn_name)
+        self.mnn_weight_path = f'{self.mnn_model_path}.weight'
         if self.weight_ops is None:
             if quant_bit is None:
                 quant_bit = self.quant_bit
@@ -125,6 +126,8 @@ class MNNConveter:
                     '--weightQuantBlock',
                     str(quant_block)
                 ]
+            if quant_bit == 32:
+                quant_args = []
             self.onnx2mnn(self.onnx_model_path, self.mnn_model_path, quant_args)
         else:
             mnn_json = f'{self.mnn_model_path}.json'
@@ -157,6 +160,16 @@ class MNNConveter:
     def rebuild(self, json_path):
         mnn_graph = json.load(open(json_path, 'rt'))
         new_ops = []
+        # Load layernorm weight from external
+        with open(self.mnn_weight_path, 'rb') as f:
+            for op in tqdm(mnn_graph['oplists'], 'Load LayerNorm data'):
+                if op['type'] == 'LayerNorm' and 'external' in op['main']:
+                    external = op['main']['external']
+                    f.seek(external[0])
+                    op['main']['gamma'] = np.frombuffer(f.read(external[1]), np.float32).tolist()
+                    op['main']['beta'] = np.frombuffer(f.read(external[2]), np.float32).tolist()
+                    del op['main']['external']
+        # Rebuild ops
         with open(self.mnn_weight_path, 'wb') as self.mnn_weight:
             for op in tqdm(mnn_graph['oplists'], 'Quant weights'):
                 if op['type'] == 'Extra' or op['type'] == 'LayerNorm':

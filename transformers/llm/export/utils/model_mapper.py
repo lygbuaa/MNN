@@ -4,7 +4,7 @@ class ModelMapper:
     def __init__(self):
         self.attrs = []
         self.mapper = dict()
-        self.regist_models()
+        self.init_models()
 
     def get_map(self, config):
         model_type = config.model_type
@@ -23,17 +23,12 @@ class ModelMapper:
                'attention' in model_map)
         self.mapper[model_type] = model_map
 
-    def regist_models(self):
+    def init_models(self):
         self.defualt_map()
-        # regist models
-        self.regist_llama()
-        self.regist_mllama()
-        self.regist_qwen()
-        self.regist_glm()
-        self.regist_glm2()
-        self.regist_phi()
-        self.regist_gemma2()
-        self.register_openelm()
+        for method_name in dir(self):
+            if callable(getattr(self, method_name)) and method_name.startswith("regist_"):
+                method = getattr(self, method_name)
+                method()
 
     def regist_llama(self):
         llama_map = self.default_map
@@ -86,6 +81,32 @@ class ModelMapper:
         }
         self.regist('mllama', mllama_map)
 
+    def regist_qwen_omni(self):
+        omni_map = {
+            'config': {
+                'hidden_size': 'thinker_config.text_config.hidden_size',
+                'head_dim': 'thinker_config.text_config.head_dim',
+                'num_attention_heads': 'thinker_config.text_config.num_attention_heads',
+                'num_hidden_layers': 'thinker_config.text_config.num_hidden_layers',
+                'num_key_value_heads': 'thinker_config.text_config.num_key_value_heads',
+                'rope_theta': 'thinker_config.text_config.rope_theta',
+                'rope_scaling': 'thinker_config.text_config.rope_scaling'
+            },
+            'model': {
+                'lm_': 'thinker.lm_head',
+                'embed_': 'thinker.model.embed_tokens',
+                'blocks_': 'thinker.model.layers',
+                'final_layernorm_': 'thinker.model.norm',
+                'visual': 'thinker.visual',
+                'audio': 'thinker.audio_tower',
+                'talker': 'talker',
+                'token2wav': 'token2wav'
+            },
+            'decoder': self.default_decoder,
+            'attention': self.default_attention
+        }
+        self.regist('qwen2_5_omni', omni_map)
+
     def regist_qwen(self):
         qwen_map = {
             'config': {
@@ -113,6 +134,23 @@ class ModelMapper:
             }
         }
         self.regist('qwen', qwen_map)
+
+    def regist_qwen3(self):
+        qwen3_attention = {
+            'q_proj': 'q_proj',
+            'k_proj': 'k_proj',
+            'v_proj': 'v_proj',
+            'o_proj': 'o_proj',
+            'q_norm': 'q_norm',
+            'k_norm': 'k_norm'
+        }
+        qwen3_map = {
+            'config': self.default_config,
+            'model': self.defualt_model,
+            'decoder': self.default_decoder,
+            'attention': qwen3_attention
+        }
+        self.regist('qwen3', qwen3_map)
 
     def regist_glm(self):
         glm_map = {
@@ -193,6 +231,37 @@ class ModelMapper:
             }
         }
         self.regist('phi-msft', phi_map)
+    def regist_intervl(self):
+        intervl_map = {
+            'config': {
+                'hidden_size': 'llm_config.hidden_size',
+                'num_attention_heads': 'llm_config.num_attention_heads',
+                'num_hidden_layers': 'llm_config.num_hidden_layers',
+                'rope_theta': 'llm_config.rope_theta',
+                'head_dim': 'llm_config.head_dim',
+                'num_key_value_heads': 'llm_config.num_key_value_heads',
+            },
+            'model': {
+                'lm_': 'language_model.lm_head',
+                'embed_': 'language_model.model.embed_tokens',
+                'blocks_': 'language_model.model.layers',
+                'final_layernorm_': 'language_model.model.norm',
+                'visual': 'vision_model'
+            },
+            'decoder': {
+                'self_attn': 'self_attn',
+                'mlp': 'mlp',
+                'input_layernorm': 'input_layernorm',
+                'post_attention_layernorm': 'post_attention_layernorm'
+            },
+            'attention': {
+                'q_proj': 'q_proj',
+                'k_proj': 'k_proj',
+                'v_proj': 'v_proj',
+                'o_proj': 'o_proj'
+            }
+        }
+        self.regist('internvl_chat', intervl_map)
 
     def regist_gemma2(self):
         gemma2_decoder = copy.deepcopy(self.default_decoder)
@@ -253,7 +322,8 @@ class ModelMapper:
             'num_attention_heads': 'num_attention_heads',
             'num_hidden_layers': 'num_hidden_layers',
             'num_key_value_heads': 'num_key_value_heads',
-            'rope_theta': 'rope_theta'
+            'rope_theta': 'rope_theta',
+            'rope_scaling': 'rope_scaling'
         }
         self.defualt_model = {
             'lm_': 'lm_head',

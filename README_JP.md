@@ -1,18 +1,18 @@
 ![MNN](doc/banner.png)
-
-[English Version](README.md)
-
-[中文版本](README_CN.md)
-
-[MNN ホームページ](http://www.mnn.zone)
+---
+[![License](https://img.shields.io/github/license/alibaba/MNN)](LICENSE.txt)
+[![Documentation](https://img.shields.io/badge/Documentation-Read-green)](https://mnn-docs.readthedocs.io/en/latest/)
+[![English Version](https://img.shields.io/badge/Language-English-green)](README.md)
+[![中文版本](https://img.shields.io/badge/Language-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-green)](README_CN.md)
+[![MNN ホームページ](https://img.shields.io/badge/Homepage-Visit-green)](http://www.mnn.zone)
 
 ## ニュース 🔥
 - [2025/01/23] フルマルチモーダル LLM Android アプリをリリースしました: [MNN-LLM-Android](./project/android/apps/MnnLlmApp/README.md)。テキストからテキスト、画像からテキスト、音声からテキスト、テキストから画像生成を含みます。
 <p align="center">
-  <img width="20%" alt="Icon"  src="./project/android/apps/MnnLlmApp/assets/image_home.jpg" style="margin: 0 10px;">
-  <img width="20%" alt="Icon" src="./project/android/apps/MnnLlmApp/assets/image_diffusion.jpg" style="margin: 0 10px;">
-  <img width="20%" alt="Icon" src="./project/android/apps/MnnLlmApp/assets/image_sound.jpg" style="margin: 0 10px;">
-  <img width="20%" alt="Icon" src="./project/android/apps/MnnLlmApp/assets/image_image.jpg" style="margin: 0 10px;">
+  <img width="20%" alt="Icon"  src="./apps/Android/MnnLlmChat/assets/image_home_new.jpg" style="margin: 0 10px;">
+  <img width="20%" alt="Icon" src="./apps/Android/MnnLlmChat/assets/image_diffusion_new.jpg" style="margin: 0 10px;">
+  <img width="20%" alt="Icon" src="./apps/Android/MnnLlmChat/assets/image_sound_new.jpg" style="margin: 0 10px;">
+  <img width="20%" alt="Icon" src="./apps/Android/MnnLlmChat/assets/image_image_new.jpg" style="margin: 0 10px;">
 </p>
 
 ## 紹介

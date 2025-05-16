@@ -601,6 +601,7 @@ void* CPUBackend::onMapTensor(Tensor::MapType mtype, Tensor::DimensionType dtype
     if (OpCommonUtils:: convertDimType(TensorUtils::getDescribe(srcTensor)->dimensionFormat) != dtype) {
         return nullptr;
     }
+    _resetDynamicMemory();
     return srcTensor->host<void>();
 }
 
@@ -793,10 +794,6 @@ void registerCPURuntimeCreator() {
 #endif
 #ifdef MNN_USE_ARMV82
     registerArm82RuntimeCreator();
-#endif
-#ifdef MNN_KLEIDIAI_ENABLED
-    // Init kleidiAI
-    KleidiAI& kai = KleidiAI::getInstance(*MNNGetCPUInfo(), false, false);
 #endif
     // TODO: Merge _initCoreFunction MNNFunctionInit and cpuinfo_arm_init
     MNNInsertExtraRuntimeCreator(MNN_FORWARD_CPU, new CPURuntimeCreator);

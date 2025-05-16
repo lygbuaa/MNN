@@ -30,8 +30,8 @@ HOST_PORT=10001
 TEMPERATURE=0.0
 
 ${MNN_PATH}/build/llm_demo \
-${CONFIG_FILE_PATH}
-# ${PROMPT_FILE_PATH}
+${CONFIG_FILE_PATH} \
+${PROMPT_FILE_PATH}
 
 # --host ${HOST_IP} \
 # --port ${HOST_PORT} \

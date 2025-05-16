@@ -1,13 +1,17 @@
 # MNN Chat Android App
 [中文版本](./README_CN.md)
+
+[Download](#releases)  [下载](./README_CN.md#releases)
+
+[iOS App](../../iOS/MNNLLMChat/README.md)
+
 ## Introduction
 This is our full multimodal language model (LLM) Android app
-
 <p align="center">
-  <img width="20%" alt="Icon"  src="./assets/image_home.jpg" style="margin: 0 10px;">
-  <img width="20%" alt="Icon" src="./assets/image_diffusion.jpg" style="margin: 0 10px;">
-  <img width="20%" alt="Icon" src="./assets/image_sound.jpg" style="margin: 0 10px;">
-  <img width="20%" alt="Icon" src="./assets/image_image.jpg" style="margin: 0 10px;">
+  <img width="20%" alt="Icon"  src="./assets/image_home_new.jpg" style="margin: 0 10px;">
+  <img width="20%" alt="Icon" src="./assets/image_diffusion_new.jpg" style="margin: 0 10px;">
+  <img width="20%" alt="Icon" src="./assets/image_sound_new.jpg" style="margin: 0 10px;">
+  <img width="20%" alt="Icon" src="./assets/image_image_new.jpg" style="margin: 0 10px;">
 </p>
 
 
@@ -16,9 +20,6 @@ This is our full multimodal language model (LLM) Android app
 + **Multimodal Support:** Enables functionality across diverse tasks, including text-to-text, image-to-text, audio-to-text, and text-to-image generation (via diffusion models).
 
 + **CPU Inference Optimization:** MNN-LLM demonstrates exceptional performance in CPU benchmarking in Android, achieving prefill speed improvements of 8.6x over llama.cpp and 20.5x over fastllm, with decoding speeds that are 2.3x and 8.9x faster, respectively. the following is a comparison between llama.cpp and MNN-LLM on Android inferencing qwen-7b.
-<p align="center">
-  <img width="60%"   src="./assets/compare.gif" style="margin: 0 10px;">
-</p>
 
 + **Broad Model Compatibility:** Supports multiple leading model providers, such as Qwen, Gemma, Llama (including TinyLlama and MobileLLM), Baichuan, Yi, DeepSeek, InternLM, Phi, ReaderLM, and Smolm.
 
@@ -47,13 +48,10 @@ This is our full multimodal language model (LLM) Android app
   cd project/android
   mkdir build_64
   cd build_64
-  ../build_64.sh "-DMNN_LOW_MEMORY=true -DMNN_CPU_WEIGHT_DEQUANT_GEMM=true -DMNN_BUILD_LLM=true -DMNN_SUPPORT_TRANSFORMER_FUSE=true -DMNN_ARM82=true -DMNN_USE_LOGCAT=true -DMNN_OPENCL=true -DLLM_SUPPORT_VISION=true -DMNN_BUILD_OPENCV=true -DMNN_IMGCODECS=true -DLLM_SUPPORT_AUDIO=true -DMNN_BUILD_AUDIO=true -DMNN_BUILD_DIFFUSION=ON -DMNN_SEP_BUILD=ON"
+  ../build_64.sh "-DMNN_LOW_MEMORY=true -DMNN_CPU_WEIGHT_DEQUANT_GEMM=true -DMNN_BUILD_LLM=true -DMNN_SUPPORT_TRANSFORMER_FUSE=true -DMNN_ARM82=true -DMNN_USE_LOGCAT=true -DMNN_OPENCL=true -DLLM_SUPPORT_VISION=true -DMNN_BUILD_OPENCV=true -DMNN_IMGCODECS=true -DLLM_SUPPORT_AUDIO=true -DMNN_BUILD_AUDIO=true -DMNN_BUILD_DIFFUSION=ON -DMNN_SEP_BUILD=OFF -DCMAKE_INSTALL_PREFIX=."
+  make install
   ```
-+ copy to llm android app project
-  ```shell
-  mkdir -p ../../../apps/Android/MnnLlmChat/app/src/main/jniLibs/arm64-v8a
-  find . -name "*.so" -exec cp {} ../../../apps/Android/MnnLlmChat/app/src/main/jniLibs/arm64-v8a \;
-  ```
+
 + build android app project and install
   ```shell
   cd ../../../apps/Android/MnnLlmChat
@@ -61,6 +59,34 @@ This is our full multimodal language model (LLM) Android app
   ```
 
 # Releases
+## Version 0.4.4.1
++ Click here to [download](https://meta.alicdn.com/data/mnn/mnn_chat_0_4_4_1.apk)
++ Fix Modlers download error
++ fix Select Text not work bug
+
+## Version 0.4.4
++ Click here to [download](https://meta.alicdn.com/data/mnn/mnn_chat_0_4_4.apk)
++ Add support for Qwen Omni 3B and 7B, enable audio output switch
++ Show size of models in modellist
+
+## Version 0.4.3
++ Click here to [download](https://meta.alicdn.com/data/mnn/mnn_chat_0_4_3.apk)
++ Support Xiaomi Mimo UI
++ Added support for Qwen Omni
++ hide attachments on send
++ Benchmarks: show total decode & prefill time
++ support copying user messages
++ Fixed download crashes on certain devices
++ Added support for reporting crash logs
++ Enabled multi-turn conversation support for multimodal models
++ Refactor Download Module,Chat Activity
+
+## Version 0.4.0
++ Click here to [download](https://meta.alicdn.com/data/mnn/mnn_chat_d_0_4_0.apk)
++ Now compatible with the Qwen3 model, with a toggle for Deep Thinking mode
++ Added Dark Mode, fully aligned with Material 3 design guidelines
++ Optimized chat interface with support for multi-line input
++ New Settings page: customize sampler type, system prompt, max new tokens, and more
 
 ## Version 0.3.0
 + Click here to [download](https://meta.alicdn.com/data/mnn/mnn_chat_d_0_3_0.apk)

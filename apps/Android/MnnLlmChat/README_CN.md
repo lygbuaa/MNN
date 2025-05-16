@@ -1,13 +1,17 @@
 # MNN Chat Android App
 
+[下载](#releases)
+
+[iOS App](../../iOS/MNNLLMChat/README-ZH.md)
+
 ## 简介
 这是我们的全功能多模态语言模型（LLM）安卓应用。
 
 <p align="center">
-  <img width="20%" alt="Icon"  src="../../../apps/Android/MnnLlmChat/assets/image_home.jpg" style="margin: 0 10px;">
-  <img width="20%" alt="Icon" src="./assets/image_diffusion.jpg" style="margin: 0 10px;">
-  <img width="20%" alt="Icon" src="./assets/image_sound.jpg" style="margin: 0 10px;">
-  <img width="20%" alt="Icon" src="./assets/image_image.jpg" style="margin: 0 10px;">
+  <img width="20%" alt="Icon"  src="./assets/image_home_new.jpg" style="margin: 0 10px;">
+  <img width="20%" alt="Icon" src="./assets/image_diffusion_new.jpg" style="margin: 0 10px;">
+  <img width="20%" alt="Icon" src="./assets/image_sound_new.jpg" style="margin: 0 10px;">
+  <img width="20%" alt="Icon" src="./assets/image_image_new.jpg" style="margin: 0 10px;">
 </p>
 
 
@@ -16,10 +20,6 @@
 + **多模态支持：** 提供多种任务功能，包括文本生成文本、图像生成文本、音频转文本及文本生成图像（基于扩散模型）。
 
 + **CPU推理优化：** 在安卓平台上，MNN-LLM展现了卓越的CPU性能，预填充速度相较于llama.cpp提高了8.6倍，相较于fastllm提升了20.5倍，解码速度分别快了2.3倍和8.9倍。下图为 llama.cpp 与 MNN-LLM 与 llama.cpp 的比较。
-<p align="center">
-  <img width="60%"   src="./assets/compare.gif" style="margin: 0 10px;">
-</p>
-
 
 + **广泛的模型兼容性：** 支持多种领先的模型提供商，包括Qwen、Gemma、Llama（涵盖TinyLlama与MobileLLM）、Baichuan、Yi、DeepSeek、InternLM、Phi、ReaderLM和Smolm。
 
@@ -43,7 +43,7 @@
   ```shell
   cd project/android
   mkdir build_64
-  ../build_64.sh "-DMNN_LOW_MEMORY=true -DMNN_CPU_WEIGHT_DEQUANT_GEMM=true -DMNN_BUILD_LLM=true -DMNN_SUPPORT_TRANSFORMER_FUSE=true -DMNN_ARM82=true -DMNN_USE_LOGCAT=true -DMNN_OPENCL=true -DLLM_SUPPORT_VISION=true -DMNN_BUILD_OPENCV=true -DMNN_IMGCODECS=true -DLLM_SUPPORT_AUDIO=true -DMNN_BUILD_AUDIO=true -DMNN_BUILD_DIFFUSION=ON -DMNN_SEP_BUILD=ON"
+  ../build_64.sh "-DMNN_LOW_MEMORY=true -DMNN_CPU_WEIGHT_DEQUANT_GEMM=true -DMNN_BUILD_LLM=true -DMNN_SUPPORT_TRANSFORMER_FUSE=true -DMNN_ARM82=true -DMNN_USE_LOGCAT=true -DMNN_OPENCL=true -DLLM_SUPPORT_VISION=true -DMNN_BUILD_OPENCV=true -DMNN_IMGCODECS=true -DLLM_SUPPORT_AUDIO=true -DMNN_BUILD_AUDIO=true -DMNN_BUILD_DIFFUSION=ON -DMNN_SEP_BUILD=OFF"
   ```
 + 复制到 LLM Android 应用项目：
   ```shell
@@ -57,6 +57,38 @@
   ```
 
 # Releases
+
+## Version 0.4.4.1
++ 点击这里 [下载][download](https://meta.alicdn.com/data/mnn/mnn_chat_0_4_4_1.apk)
++ 解决无法选择 Assistant文本问题。
++ 解决魔乐下载校验失败问题
+
+# Version 0.4.4
++ 点击这里 [下载](https://meta.alicdn.com/data/mnn/mnn_chat_0_4_4.apk)
++ Qwen Omni 的支持语音输出开关
++ 模型列表可显示模型大小
+
+# Version 0.4.3
+
++ 点击这里 [下载](https://meta.alicdn.com/data/mnn/mnn_chat_0_4_3.apk)
++ 支持小米 mimo 模型 UI
++ 新增对 Qwen Omni 的支持
++ 聊天页面界面发送后隐藏附件
++ 显示总解码时间和预填充时间
++ 聊天界面支持复制用户消息
++ 解决下载错误
++ 修复在某些设备上下载崩溃的问题
++ 支持上报崩溃日志
++ 支持多模态模型的多轮对话
++ 重构下载模块,Chat模块
+
+
+# Version 0.4.0
++ 点击这里 [下载](https://meta.alicdn.com/data/mnn/mnn_chat_d_0_4_0.apk)
++ 兼容 Qwen3 模型，支持开启／关闭“深度思考”模式
++ 新增深色模式，全面适配 Material 3 设计规范
++ 优化聊天界面，支持多行输入
++ 增加「设置」页面，可自定义采样器类型（sampler type）、系统提示（system prompt）、最大生成 Token（max new tokens）等参数
 
 # Version 0.3.0
 + 点击这里 [下载](https://meta.alicdn.com/data/mnn/mnn_chat_d_0_3_0.apk)
