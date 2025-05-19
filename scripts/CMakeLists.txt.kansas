@@ -1,0 +1,51 @@
+cmake_minimum_required(VERSION 3.10.0)
+project(llm-demo-server)
+
+MESSAGE(STATUS "DEPENDENCIES_LOCATION: " ${DEPENDENCIES_LOCATION})
+MESSAGE(STATUS "THIRDPARTY_ROOT_PATH: " ${THIRDPARTY_ROOT_PATH})
+
+option(MNN_BUILD_SHARED_LIBS "MNN build shared or static lib" ON)
+option(MNN_SEP_BUILD "Build MNN Backends and expression separately. Only works with MNN_BUILD_SHARED_LIBS=ON" ON)
+
+add_compile_options("-Wl,--no-undefined")
+set(CMAKE_C_FLAGS "-fPIC -Wall -D_GNU_SOURCE -rdynamic -export-dynamic -Werror=return-type")
+set(CMAKE_CXX_FLAGS "-std=c++17 -fexceptions -frtti -fPIC -Wall -D_GNU_SOURCE -rdynamic -export-dynamic -Werror=return-type")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -fsanitize=address")
+
+EXECUTE_PROCESS(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE CPU_ARCHITECTURE)
+MESSAGE(STATUS "cpu architecture: ${CPU_ARCHITECTURE}")
+if(${CPU_ARCHITECTURE} STREQUAL "x86_64")
+    MESSAGE(STATUS "using ${CPU_ARCHITECTURE}")
+elseif(${CPU_ARCHITECTURE} STREQUAL "aarch64")
+    MESSAGE(STATUS "using ${CPU_ARCHITECTURE}")
+else()
+  MESSAGE(FATAL_ERROR "invalid cpu architecture!")
+endif()
+
+include_directories(
+    ${CMAKE_CURRENT_LIST_DIR}/include
+    ${CMAKE_CURRENT_LIST_DIR}/MNN/expr
+    ${CMAKE_CURRENT_LIST_DIR}/MNN/plugin
+    ${CMAKE_CURRENT_LIST_DIR}/tools
+    ${CMAKE_CURRENT_LIST_DIR}/tools/audio/include/audio
+    ${CMAKE_CURRENT_LIST_DIR}/tools/cv/include/cv
+    ${CMAKE_CURRENT_LIST_DIR}/source
+    ${CMAKE_CURRENT_LIST_DIR}/3rd_party
+)
+
+link_directories(${CMAKE_CURRENT_LIST_DIR}/lib/${CPU_ARCHITECTURE})
+
+# set(MNN_DEPS
+#     ${CMAKE_CURRENT_LIST_DIR}/lib/${CPU_ARCHITECTURE}/libMNN.so
+#     ${CMAKE_CURRENT_LIST_DIR}/lib/${CPU_ARCHITECTURE}/libMNN_Express.so
+#     ${CMAKE_CURRENT_LIST_DIR}/lib/${CPU_ARCHITECTURE}/libMNNOpenCV.so
+# )
+set(MNN_DEPS
+    MNN
+    MNN_Express
+    MNNOpenCV
+)
+MESSAGE(STATUS "MNN_DEPS: ${MNN_DEPS}")
+
+add_subdirectory(transformers/llm/engine)
