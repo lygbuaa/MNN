@@ -14,7 +14,7 @@ import com.alibaba.mls.api.download.DownloadInfo
 import com.alibaba.mls.api.download.DownloadListener
 import com.alibaba.mls.api.download.ModelDownloadManager
 import com.alibaba.mnnllm.android.R
-import com.alibaba.mnnllm.android.utils.ModelUtils.processList
+import com.alibaba.mnnllm.android.model.ModelUtils.processList
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonSyntaxException
@@ -88,6 +88,9 @@ class ModelListPresenter(private val context: Context, private val view: ModelLi
     }
 
     private fun saveToCache(hfModelItems: List<ModelItem>) {
+        if (hfModelItems.isEmpty()) {
+            return
+        }
         val gson = GsonBuilder().setPrettyPrinting().create()
         val json = gson.toJson(hfModelItems)
 

@@ -18,6 +18,14 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
     companion object {
         const val TAG = "MainSettingsFragment"
     }
+
+    private var updateChecker: UpdateChecker? = null
+
+    override fun onResume() {
+        super.onResume()
+        updateChecker?.checkForUpdates(requireContext(), false)
+    }
+
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.main_settings_prefs, rootKey)
 
@@ -28,7 +36,8 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
                 AppUtils.getAppVersionName(requireContext())
             )
             setOnPreferenceClickListener {
-                UpdateChecker(requireContext()).checkForUpdates(requireContext(), true)
+                updateChecker = UpdateChecker(requireContext())
+                updateChecker?.checkForUpdates(requireContext(), true)
                 true
             }
         }
@@ -44,8 +53,7 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
                 }
             }
             preferenceManager.sharedPreferences?.let { sharedPreferences ->
-                val defaultProvider =
-                    if (!PreferenceUtils.isUseModelsScopeDownload(requireContext())) "HuggingFace" else "ModelScope"
+                val defaultProvider = MainSettings.getDownloadProviderString(requireContext())
                 if (!sharedPreferences.contains("download_provider")) {
                     sharedPreferences.edit().putString("download_provider", defaultProvider).apply()
                     downloadProviderPref.value = defaultProvider
