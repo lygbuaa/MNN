@@ -24,5 +24,7 @@ cd build
 cmake ../ -DMNN_LOW_MEMORY=true -DMNN_CPU_WEIGHT_DEQUANT_GEMM=true \
           -DMNN_BUILD_LLM=true -DMNN_SUPPORT_TRANSFORMER_FUSE=true \
           -DLLM_SUPPORT_VISION=true -DMNN_BUILD_OPENCV=true -DMNN_IMGCODECS=true \
-          -DMNN_AVX512=true 
+          -DMNN_AVX512=true \
+          -DCMAKE_INSTALL_PREFIX=${MNN_PATH}/install
 make -j8
+make install
